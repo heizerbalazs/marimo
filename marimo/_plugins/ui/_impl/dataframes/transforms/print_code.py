@@ -212,6 +212,21 @@ def python_print_pandas(
         column_ids = transform.column_ids
         return f"{df_name}.drop_duplicates({_list_of_strings(column_ids)}, keep={_as_literal(transform.keep)})"
 
+    elif transform.type == TransformType.PIVOT:
+        index, columns, values, aggregation = (
+            transform.index,
+            transform.columns,
+            transform.values,
+            transform.aggregation,
+        )
+        args = _args_list(
+            f"index={_list_of_strings(index)}",
+            f"columns={_list_of_strings(columns)}",
+            f"values={_list_of_strings(values)}",
+            f"aggfunc={_as_literal(aggregation)}",
+        )
+        return f"pd.pivot_table({df_name}, {args}).reset_index()"
+
     assert_never(transform.type)
 
 
@@ -372,6 +387,21 @@ def python_print_polars(
         column_ids = transform.column_ids
         return f"{df_name}.unique(subset={_list_of_strings(column_ids)}, keep={_as_literal(transform.keep)})"  # noqa: E501
 
+    elif transform.type == TransformType.PIVOT:
+        index, columns, values, aggregation = (
+            transform.index,
+            transform.columns,
+            transform.values,
+            transform.aggregation,
+        )
+        args = _args_list(
+            f"index={_list_of_strings(index)}",
+            f"on={_list_of_strings(columns)}",
+            f"values={_list_of_strings(values)}",
+            f"aggregate_function={_as_literal(aggregation)}",
+        )
+        return f"{df_name}.pivot({args})"
+
     assert_never(transform.type)
 
 
@@ -504,6 +534,20 @@ def python_print_ibis(
     elif transform.type == TransformType.UNIQUE:
         column_ids = transform.column_ids
         return f"{df_name}.distinct(on={_list_of_strings(column_ids)}, keep={_as_literal(transform.keep)})"  # noqa: E501
+
+    elif transform.type == TransformType.PIVOT:
+        index, columns, values, aggregation = (
+            transform.index,
+            transform.columns,
+            transform.values,
+            transform.aggregation,
+        )
+        # Ibis pivot support varies by backend, generate basic pivot
+        pivot_cols = ", ".join(
+            [f"{df_name}[{_as_literal(col)}]" for col in columns]
+        )
+        agg_cols = {val: aggregation for val in values}
+        return f"{df_name}.pivot_longer({_list_of_strings(index)}, {_list_of_strings(columns)}, {_list_of_strings(values)}, {_as_literal(aggregation)})"
 
     assert_never(transform.type)
 

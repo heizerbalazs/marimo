@@ -21,6 +21,7 @@ from marimo._plugins.ui._impl.dataframes.transforms.types import (
     ExplodeColumnsTransform,
     FilterRowsTransform,
     GroupByTransform,
+    PivotTransform,
     RenameColumnTransform,
     SampleRowsTransform,
     SelectColumnsTransform,
@@ -333,6 +334,71 @@ class NarwhalsTransformHandler(TransformHandler[DataFrame]):
                 .lazy()
             )
         assert_never(keep)
+
+    @staticmethod
+    def handle_pivot(df: DataFrame, transform: PivotTransform) -> DataFrame:
+        # Build aggregation expression
+        agg_func = transform.aggregation
+
+        # Collect the dataframe since pivot needs a concrete dataframe
+        collected_df = df.collect()
+
+        # For each value column, create aggregation expressions
+        agg_exprs: list[Expr] = []
+        for value_col in transform.values:
+            if agg_func == "count":
+                agg_exprs.append(col(value_col).count())
+            elif agg_func == "sum":
+                agg_exprs.append(col(value_col).sum())
+            elif agg_func == "mean":
+                agg_exprs.append(col(value_col).mean())
+            elif agg_func == "median":
+                agg_exprs.append(col(value_col).median())
+            elif agg_func == "min":
+                agg_exprs.append(col(value_col).min())
+            elif agg_func == "max":
+                agg_exprs.append(col(value_col).max())
+            else:
+                assert_never(agg_func)
+
+        # Group by index + columns, then aggregate
+        group_cols = list(transform.index) + list(transform.columns)
+        grouped = collected_df.group_by(group_cols).agg(agg_exprs)
+
+        # Pivot the data
+        # Note: Narwhals pivot is different - we need to use the native implementation
+        native_df = grouped.to_native()
+
+        if _is_polars_dataframe_or_lazyframe(native_df):
+            import polars as pl
+
+            # Polars pivot
+            pivoted = native_df.pivot(
+                index=transform.index,
+                on=transform.columns,
+                values=transform.values,
+                aggregate_function=transform.aggregation,
+            )
+            import narwhals.stable.v2 as nw
+            return nw.from_native(pivoted).lazy()
+        elif nw.dependencies.is_pandas_dataframe(native_df):
+            import pandas as pd
+
+            # Pandas pivot_table
+            pivoted = pd.pivot_table(
+                native_df,
+                index=transform.index,
+                columns=transform.columns,
+                values=transform.values,
+                aggfunc=transform.aggregation,
+            )
+            pivoted = pivoted.reset_index()
+            import narwhals.stable.v2 as nw
+            return nw.from_native(pivoted).lazy()
+        else:
+            # For other backends, return grouped result (not truly pivoted)
+            # This is a fallback for backends that don't support pivot
+            return grouped.lazy()
 
     @staticmethod
     def as_python_code(

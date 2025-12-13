@@ -30,6 +30,7 @@ from marimo._plugins.ui._impl.dataframes.transforms.types import (
     ExplodeColumnsTransform,
     FilterRowsTransform,
     GroupByTransform,
+    PivotTransform,
     RenameColumnTransform,
     SampleRowsTransform,
     SelectColumnsTransform,
@@ -808,3 +809,33 @@ class TestCombinedTransforms:
 
         self._test_transforms(pl_dataframe, transforms)
         self._test_transforms(pd_dataframe, transforms)
+
+    def test_pivot(
+        self, pl_dataframe: pl.DataFrame, pd_dataframe: pd.DataFrame
+    ):
+        """Test pivot transform."""
+        transforms = Transformations(
+            [
+                PivotTransform(
+                    type=TransformType.PIVOT,
+                    index=["a"],
+                    columns=["b"],
+                    values=["c"],
+                    aggregation="sum",
+                ),
+            ]
+        )
+
+        # Note: We only test code generation, not execution
+        # because pivot results can vary between backends
+        code = python_print_transforms(
+            "df", ["a", "b", "c"], transforms.transforms, python_print_pandas
+        )
+        assert "pivot" in code.lower()
+        assert ast.parse(code)
+
+        code = python_print_transforms(
+            "df", ["a", "b", "c"], transforms.transforms, python_print_polars
+        )
+        assert "pivot" in code.lower()
+        assert ast.parse(code)

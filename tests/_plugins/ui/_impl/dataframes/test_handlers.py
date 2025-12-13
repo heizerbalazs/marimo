@@ -23,6 +23,7 @@ from marimo._plugins.ui._impl.dataframes.transforms.types import (
     ExplodeColumnsTransform,
     FilterRowsTransform,
     GroupByTransform,
+    PivotTransform,
     RenameColumnTransform,
     SampleRowsTransform,
     SelectColumnsTransform,
@@ -1160,3 +1161,32 @@ class TestTransformHandler:
         )
         result = apply(df, in_transform)
         assert_frame_equal(result, expected)
+
+    @staticmethod
+    @pytest.mark.parametrize(
+        "df",
+        create_test_dataframes(
+            {
+                "date": ["2024-01-01", "2024-01-01", "2024-01-02", "2024-01-02"],
+                "category": ["A", "B", "A", "B"],
+                "value": [100, 200, 150, 250],
+            }
+        ),
+    )
+    def test_pivot(df: DataFrameType) -> None:
+        transform = PivotTransform(
+            type=TransformType.PIVOT,
+            index=["date"],
+            columns=["category"],
+            values=["value"],
+            aggregation="sum",
+        )
+        result = apply(df, transform)
+        result_nw = collect_df(result)
+
+        # Check that pivot worked - should have columns for each category
+        columns = result_nw.columns
+        assert "date" in columns
+        # The exact column names depend on the backend implementation
+        # but we should have fewer rows after pivoting
+        assert result_nw.shape[0] == 2  # 2 unique dates

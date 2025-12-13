@@ -65,6 +65,7 @@ class TransformType(Enum):
     EXPLODE_COLUMNS = "explode_columns"
     EXPAND_DICT = "expand_dict"
     UNIQUE = "unique"
+    PIVOT = "pivot"
 
 
 @dataclass(frozen=True)
@@ -175,6 +176,15 @@ class UniqueTransform:
     keep: UniqueKeep
 
 
+@dataclass
+class PivotTransform:
+    type: Literal[TransformType.PIVOT]
+    index: ColumnIds
+    columns: ColumnIds
+    values: ColumnIds
+    aggregation: Aggregation
+
+
 Transform = Union[
     AggregateTransform,
     ColumnConversionTransform,
@@ -188,6 +198,7 @@ Transform = Union[
     ExplodeColumnsTransform,
     ExpandDictTransform,
     UniqueTransform,
+    PivotTransform,
 ]
 
 
@@ -260,6 +271,11 @@ class TransformHandler(abc.ABC, Generic[T]):
     @staticmethod
     @abc.abstractmethod
     def handle_unique(df: T, transform: UniqueTransform) -> T:
+        raise NotImplementedError
+
+    @staticmethod
+    @abc.abstractmethod
+    def handle_pivot(df: T, transform: PivotTransform) -> T:
         raise NotImplementedError
 
     @staticmethod

@@ -73,6 +73,26 @@ function handleTransform(
       return Maps.filterMap(next, (_v, k) => transform.column_ids.includes(k));
     case "select_columns":
       return Maps.filterMap(next, (_v, k) => transform.column_ids.includes(k));
+    case "pivot": {
+      // For pivot, we keep the index columns
+      // The pivot columns' values become new column names (dynamic based on data)
+      // We can't know the exact output columns without executing the transform
+      const updated = new Map<ColumnId, string>();
+
+      // Keep index columns
+      for (const indexCol of transform.index ?? []) {
+        const type = next.get(indexCol);
+        if (type) {
+          updated.set(indexCol, type);
+        }
+      }
+
+      // Note: The actual pivoted columns will be created dynamically
+      // based on the unique values in the pivot columns, so we can't
+      // determine them statically here
+
+      return updated;
+    }
     case "filter_rows":
     case "shuffle_rows":
     case "sample_rows":

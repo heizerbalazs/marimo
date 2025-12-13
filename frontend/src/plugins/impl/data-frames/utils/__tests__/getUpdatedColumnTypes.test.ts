@@ -63,6 +63,13 @@ const Transforms = {
     column_ids: ["col1"] as ColumnId[],
     keep: "first",
   } satisfies TransformType,
+  PIVOT: {
+    type: "pivot",
+    index: ["col1"] as ColumnId[],
+    columns: [2] as ColumnId[],
+    values: ["col3"] as ColumnId[],
+    aggregation: "sum",
+  } satisfies TransformType,
 };
 
 describe("getUpdatedColumnTypes", () => {
@@ -171,6 +178,20 @@ describe("getUpdatedColumnTypes", () => {
         "col1" => "str",
         2 => "bool",
         "col3" => "int",
+      }
+    `);
+  });
+
+  it("should update column types for pivot conversion", () => {
+    const result = getUpdatedColumnTypes(
+      [Transforms.PIVOT],
+      INITIAL_COLUMN_TYPES,
+    );
+    // For pivot, we only keep the index columns
+    // The actual pivoted columns are created dynamically based on data
+    expect(result).toMatchInlineSnapshot(`
+      Map {
+        "col1" => "str",
       }
     `);
   });

@@ -31,6 +31,7 @@ const KNOWN_DIALECTS_ARRAY = [
   "sqlite",
   "mssql",
   "sqlserver",
+  "sybase",
   "duckdb",
   "mariadb",
   "cassandra",
@@ -80,6 +81,7 @@ export function guessDialect(
       return SQLite;
     case "mssql":
     case "sqlserver":
+    case "sybase":
       return MSSQL;
     case "duckdb":
       return DuckDBDialect;

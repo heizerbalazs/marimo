@@ -1,12 +1,12 @@
 name: GitHub Pages
 
 on:
-  # Weekly
-  schedule:
-    - cron: "0 0 * * 0" # Run at midnight UTC on Sunday
+  # Temporarily disabled
+  # schedule:
+  #   - cron: "0 0 * * 0" # Run at midnight UTC on Sunday
 
   # Allow manual trigger
-  workflow_dispatch: {}
+  # workflow_dispatch: {}
 
 env:
   UV_SYSTEM_PYTHON: 1
